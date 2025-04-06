@@ -97,14 +97,14 @@ router.post(route + '/checkusername', function (req, res) {//kept just in case t
       res.end(JSON.stringify(outdata));
     });
 });
-router.post(route + '/authenticatelogin', function (req, res) {//to verify login creds
+router.post(route + '/authenticatelogin', async function (req, res) {//to verify login creds
   const data = {
     username: req.body.username,
     password: req.body.password
   };
 
-  authenticatelogindb(data)
-    .then((result) => {
+  let result= await authenticatelogindb(data)
+    // .then((result) => {
       console.log('Check result:', result);
       let msg = "";
       if (result.split('~')[0] == '0') {
@@ -122,17 +122,17 @@ router.post(route + '/authenticatelogin', function (req, res) {//to verify login
       };
 
       res.end(JSON.stringify(outdata));
-    })
-    .catch((error) => {
-      console.error('Error in execution:', error);
+    // })
+    // .catch((error) => {
+    //   console.error('Error in execution:', error);
 
-      const outdata = {
-        Flag: '1', // Default to '1' on error
-        Msg: 'Error in execution: ' + error,
-      };
+    //   const outdata = {
+    //     Flag: '1', // Default to '1' on error
+    //     Msg: 'Error in execution: ' + error,
+    //   };
 
-      res.end(JSON.stringify(outdata));
-    });
+    //   res.end(JSON.stringify(outdata));
+    // });
 });
 router.post(route + '/forgotpass', function (req, res) {//kept just in case this api is needed in future
   const data = {

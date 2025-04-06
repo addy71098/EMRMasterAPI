@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
-const { sendmail,getverifyemailmailbody } = require('../utillties/mail');
-const fs = require('fs');
+const { sendmail, getverifyemailmailbody } = require('../utillties/mail');
+const { establishConnection, terminateConnection } = require('../connection/connect');
+const { getSpecificUserColumnsByCondition } = require('../tables/usertable');
 // require('dotenv').config({ path: '.env.dev' });
 require('dotenv').config();
 // Configure the PostgreSQL connection
@@ -23,14 +24,14 @@ require('dotenv').config();
 //   ssl: { rejectUnauthorized: false },
 // });
 
-const pool = new Pool({
-  user: process.env.DB_USER,      
-  host: process.env.DB_HOST,               
-  database: process.env.DB_NAME,       
-  password: String(process.env.DB_PASSWORD),       
-  port: process.env.DB_PORT,                  
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,  
-});
+// const pool = new Pool({
+//   user: process.env.DB_USER,
+//   host: process.env.DB_HOST,
+//   database: process.env.DB_NAME,
+//   password: String(process.env.DB_PASSWORD),
+//   port: process.env.DB_PORT,
+//   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+// });
 
 function registerdb(data) {
   const query = `
@@ -132,55 +133,74 @@ function checkemaildb(data) {
     return '1';
   }
 }
-function authenticatelogindb(data) {
-  const query = `SELECT twofactchk, email FROM USERTABLE WHERE USERNAME = $1 AND PASSWORD = $2`;
-  console.log('username: ' + data.username);
-  console.log('password: ' + data.password);
-
-  const values = [data.username, data.password];
+async function authenticatelogindb(data) {
+  let seq = null;
   try {
-    let outcode;
-    return pool.query(query, values)
-      .then((result) => {
-        console.log(result.rows);
-        // console.log(result.rowCount);
-        if (result.rowCount > 0) {
-          if (result.rows[0].twofactchk == '0') {
-            outcode = '0';
-            console.log('Logged in successfully!');
-          }
-          else {
-            outcode = '2~' + result.rows[0].email;
-            let otp = Math.floor(100000 + Math.random() * 900000);
-            const query1 = `INSERT INTO LOGINOTP (username, otp)
-                            VALUES ($1, $2)`;
-            const values1 = [
-              data.username,
-              otp
-            ];
-            const result1 = pool.query(query1, values1);
-            console.log('otp inserted successfully:', result1.rowCount);
-            setTimeout(function (values1, flg) {//Deleting otp entry after 5 mins.
-              console.log('Deleteing otp entry as 5 mins have passed: ' + values1.join(', '));
-              deleteotpentry(values1, flg)
-            }, 1000 * 60 * 5, values1, '1')
-            let mailstatus = sendmail(result.rows[0].email, 'OTP for login', 'Please use this ( "' + otp + '" ) for login', '');
-            console.log("Message sent: %s", mailstatus);
-          }
-
-        }
-        else {
-          outcode = '1';
-          console.log('Log in failed');
-
-        }
-        console.log('outcode=' + outcode);
-        return outcode;
-      })
-  } catch (error) {
-    console.error('Error in checking username:', error);
+    // seq = establishConnection();
+    // console.log('connection established=>' + JSON.stringify(seq));
+    
+    let result = await getSpecificUserColumnsByCondition(['twofactchk', 'email'], { username: data.username, password: data.password })
+    if (result?.length > 0) {
+      return '0';
+    }
+    else return '1';
+  }
+  catch (e) {
+    console.log('Something bad happened here=>: ' + JSON.stringify(e));
     return '1';
   }
+  finally {
+    // terminateConnection(seq);
+  }
+
+  // const query = `SELECT twofactchk, email FROM USERTABLE WHERE USERNAME = $1 AND PASSWORD = $2`;
+  // console.log('username: ' + data.username);
+  // console.log('password: ' + data.password);
+
+  // const values = [data.username, data.password];
+  // try {
+  //   let outcode;
+  //   return pool.query(query, values)
+  //     .then((result) => {
+  //       console.log(result.rows);
+  //       // console.log(result.rowCount);
+  //       if (result.rowCount > 0) {
+  //         if (result.rows[0].twofactchk == '0') {
+  //           outcode = '0';
+  //           console.log('Logged in successfully!');
+  //         }
+  //         else {
+  //           outcode = '2~' + result.rows[0].email;
+  //           let otp = Math.floor(100000 + Math.random() * 900000);
+  //           const query1 = `INSERT INTO LOGINOTP (username, otp)
+  //                           VALUES ($1, $2)`;
+  //           const values1 = [
+  //             data.username,
+  //             otp
+  //           ];
+  //           const result1 = pool.query(query1, values1);
+  //           console.log('otp inserted successfully:', result1.rowCount);
+  //           setTimeout(function (values1, flg) {//Deleting otp entry after 5 mins.
+  //             console.log('Deleteing otp entry as 5 mins have passed: ' + values1.join(', '));
+  //             deleteotpentry(values1, flg)
+  //           }, 1000 * 60 * 5, values1, '1')
+  //           let mailstatus = sendmail(result.rows[0].email, 'OTP for login', 'Please use this ( "' + otp + '" ) for login', '');
+  //           console.log("Message sent: %s", mailstatus);
+  //         }
+
+  //       }
+  //       else {
+  //         outcode = '1';
+  //         console.log('Log in failed');
+
+  //       }
+  //       console.log('outcode=' + outcode);
+  //       return outcode;
+  //     })
+  // } catch (error) {
+  //   console.error('Error in checking username:', error);
+  //   return '1';
+  // }
 }
 function forgotpassdb(data) {
   const query = `SELECT email FROM USERTABLE WHERE USERNAME = $1`;
@@ -316,7 +336,7 @@ function resetpassdb(data) {
 
 function verifyemaildb(data) {
   const query = `INSERT INTO tblemailotp(entrycode, otp, email) VALUES ($2, $3, $1);`;
-  
+
   const values = [
     data.email,
     Math.floor(100000 + Math.random() * 900000),
@@ -329,7 +349,7 @@ function verifyemaildb(data) {
         if (result.rowCount > 0) {
           console.log(values);
           const htmlString = getverifyemailmailbody();
-          let mailstatus = sendmail(data.email, 'OTP for email verification', '', htmlString.replace("{{OTP}}",values[1]));
+          let mailstatus = sendmail(data.email, 'OTP for email verification', '', htmlString.replace("{{OTP}}", values[1]));
           outcode = '0~' + values[2];
           setTimeout((values) => {//Delete otp entry after 5 mins
             const query1 = `DELETE FROM tblemailotp WHERE  entrycode = $1 AND otp = $2`;
