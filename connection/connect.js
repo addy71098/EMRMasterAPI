@@ -1,5 +1,6 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
+var connection=null;
 function establishConnection(){
     console.log(`DB Creds: ${process.env.DB_NAME} / ${process.env.DB_USER} / ${process.env.DB_PASSWORD}`);
     
@@ -17,4 +18,10 @@ function establishConnection(){
 function terminateConnection(connection){
     connection.close();
 }
-module.exports = {establishConnection, terminateConnection}
+function getConnection(){
+  if(connection==null){
+    connection=establishConnection();
+  }
+  return connection;
+}
+module.exports = {establishConnection, terminateConnection, getConnection}

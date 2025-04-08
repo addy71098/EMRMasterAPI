@@ -1,7 +1,10 @@
 const { Pool } = require('pg');
 const { sendmail, getverifyemailmailbody } = require('../utillties/mail');
-const { establishConnection, terminateConnection } = require('../connection/connect');
-const { getSpecificUserColumnsByCondition } = require('../tables/usertable');
+// const { establishConnection, terminateConnection } = require('../connection/connect');
+const { createUser, getAllUsers, getUserByCondition, updateUser, deleteUser,  getSpecificUserColumns,  getSpecificUserColumnsByCondition } = require('../tables/usertable');
+const { createForgotPassEntry, getAllForgotPassEntries, getForgotPassEntriesByCondition, updateForgotPassEntry, deleteForgotPassEntry, getSpecificForgotPassEntryColumns, getSpecificForgotPassEntryColumnsByCondition } = require('../tables/forgotpass');
+const { createLoginOTPEntry, getAllLoginOTPEntries, getLoginOTPEntriesByCondition, updateLoginOTPEntry, deleteLoginOTPEntry, getSpecificLoginOTPEntryColumns, getSpecificLoginOTPEntryColumnsByCondition } = require('../tables/loginotp');
+const { createEmailOTPEntry, getAllEmailOTPEntries, getEmailOTPEntriesByCondition, updateEmailOTPEntry, deleteEmailOTPEntry, getSpecificEmailOTPEntryColumns, getSpecificEmailOTPEntryColumnsByCondition } = require('../tables/tblemailotp');
 // require('dotenv').config({ path: '.env.dev' });
 require('dotenv').config();
 // Configure the PostgreSQL connection
