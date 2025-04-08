@@ -23,6 +23,6 @@ tmp/
 
 # Ignore everything in the controller, models, routes, and views folders
 controller/*
-models/*
+model/*
 routes/*
 views/*
